@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const VERIFY_OTP_URL = "https://<your-func-app>.azurewebsites.net/api/VerifyOtp";
-const SAVE_USER_URL = "https://<your-func-app>.azurewebsites.net/api/SaveUser";
+const VERIFY_OTP_URL =
+  "https://frontendazurefunc.azurewebsites.net/api/Validateotp?code=wLsW5bE5H7_Y-4XXxW3KnjE_wzkRH-Ig-yrUczczmWWAAzFuLuA-7A==";
 
 export default function VerifyOtpPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { phone, name = "", isSignup = false } = location.state || {};
+  const { phone } = location.state || {};
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,41 +29,33 @@ export default function VerifyOtpPage() {
       });
 
       if (!verifyRes.ok) {
-        setMessage("OTP verification failed");
+        // Extract error message from response text
+        const errorText = await verifyRes.text();
+        setMessage(errorText || "OTP verification failed");
         setLoading(false);
         return;
       }
 
-      if (isSignup) {
-        const saveRes = await fetch(SAVE_USER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, name }),
-        });
-        if (!saveRes.ok) {
-          setMessage("Failed to save user info");
-          setLoading(false);
-          return;
-        }
-      }
+      const data = await verifyRes.json();
 
-      alert("OTP verified! You are now logged in.");
+      alert(data.message || "OTP verified! You are now logged in.");
 
-      // Save user info locally or just redirect (no context)
-      // Optionally save to localStorage:
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ phone, name })
-      );
+      // Save user info locally or just redirect
+      localStorage.setItem("user", JSON.stringify({ phone }));
 
       navigate("/");
-    } catch {
+    } catch (error) {
       setMessage("Error verifying OTP");
     }
     setLoading(false);
   }
 
-  if (!phone) return <p className="mt-20 text-center">No phone number provided</p>;
+  if (!phone)
+    return (
+      <p className="mt-20 text-center text-red-600">
+        No phone number provided
+      </p>
+    );
 
   return (
     <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded shadow">
@@ -84,7 +76,8 @@ export default function VerifyOtpPage() {
       >
         {loading ? "Verifying OTP..." : "Verify OTP"}
       </button>
-      {message && <p className="mt-4 text-red-600">{message}</p>}
+      {message && <p className="mt-4 text-red-600 text-center">{message}</p>}
     </div>
   );
 }
+
